@@ -3,7 +3,7 @@ import speech_recognition as sr
 import openai
 
 # Set your OpenAI API key here
-openai.api_key = "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"
+openai.api_key = OPENKEY
 
 # FastAPI app initialization
 app = FastAPI()
