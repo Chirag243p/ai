@@ -7,4 +7,5 @@ ffmpeg
 pydub
 gunicorn
 python-multipart
+sounddevice==0.4.4
 pyaudio
