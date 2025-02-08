@@ -1,25 +1,19 @@
-# Use official Python image as the base image
 FROM python:3.11-slim
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libportaudio2 \
-    libsndfile1 \
-    && rm -rf /var/lib/apt/lists/*
+# Install PortAudio
+RUN apt-get update && apt-get install -y portaudio19-dev
 
-# Set the working directory in the container
+# Set the working directory
 WORKDIR /app
 
-# Copy the current directory contents into the container
-COPY . .
+# Copy the requirements file into the container
+COPY requirements.txt /app/
 
-# Install Python dependencies
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+# Install the dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose port for Uvicorn to serve FastAPI
-EXPOSE 10000
+# Copy the rest of the application code
+COPY . /app/
 
-# Run the FastAPI app using Uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]
+# Set the command to run your application
+CMD ["python", "your_app.py"]
