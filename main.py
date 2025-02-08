@@ -1,8 +1,7 @@
-from fastapi import FastAPI, HTTPException, File, UploadFile
+from fastapi import FastAPI, HTTPException
 import speech_recognition as sr
 import openai
 import os
-from pydub import AudioSegment
 
 # Load OpenAI API key from environment variable
 openai.api_key = os.environ.get("OPENAI_API_KEY")
@@ -10,34 +9,32 @@ openai.api_key = os.environ.get("OPENAI_API_KEY")
 app = FastAPI()
 
 @app.post("/speech-to-text")
-async def speech_to_text(file: UploadFile = File(...)):
+async def speech_to_text():
     recognizer = sr.Recognizer()
-    audio_path = "temp_audio.wav"
 
     try:
-        # Convert file to WAV format
-        audio = await file.read()
-        with open(audio_path, "wb") as f:
-            f.write(audio)
+        # Use the microphone as source for input.
+        # This will only work in an environment with a microphone.
+        with sr.Microphone() as source:
+            print("Adjusting for ambient noise, please wait...")
+            recognizer.adjust_for_ambient_noise(source)
+            print("Listening for your voice command...")
+            audio_data = recognizer.listen(source)
 
-        # Use pydub to convert to WAV if needed
-        if not file.filename.endswith(".wav"):
-            sound = AudioSegment.from_file(audio_path)
-            sound.export(audio_path, format="wav")
-
-        with sr.AudioFile(audio_path) as source:
-            audio_data = recognizer.record(source)
-
-        # Convert speech to text
+        # Convert speech to text using Google Speech Recognition
         text = recognizer.recognize_google(audio_data)
+        print(f"Recognized text: {text}")
 
-        # Send text to OpenAI
+        # Send the transcribed text to OpenAI and get a response
         response = openai.ChatCompletion.create(
-            model="gpt-4-turbo",
+            model="gpt-4-turbo",  # or "gpt-3.5-turbo" as needed
             messages=[{"role": "user", "content": text}]
         )
 
-        return {"text": text, "chatgpt_response": response['choices'][0]['message']['content'].strip()}
+        # Extract ChatGPT response
+        chatgpt_response = response['choices'][0]['message']['content'].strip()
+
+        return {"text": text, "chatgpt_response": chatgpt_response}
 
     except sr.UnknownValueError:
         raise HTTPException(status_code=400, detail="Could not understand the audio.")
