@@ -2,27 +2,34 @@ from fastapi import FastAPI, HTTPException, File, UploadFile
 import speech_recognition as sr
 import openai
 import os
+from pydub import AudioSegment
 
 # Load OpenAI API key from environment variable
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 
-# Initialize FastAPI app
 app = FastAPI()
 
 @app.post("/speech-to-text")
 async def speech_to_text(file: UploadFile = File(...)):
     recognizer = sr.Recognizer()
+    audio_path = "temp_audio.wav"
 
     try:
-        # Read the uploaded audio file
-        with open("temp_audio.wav", "wb") as buffer:
-            buffer.write(await file.read())
+        # Convert file to WAV format
+        audio = await file.read()
+        with open(audio_path, "wb") as f:
+            f.write(audio)
 
-        with sr.AudioFile("temp_audio.wav") as source:
-            audio = recognizer.record(source)
+        # Use pydub to convert to WAV if needed
+        if not file.filename.endswith(".wav"):
+            sound = AudioSegment.from_file(audio_path)
+            sound.export(audio_path, format="wav")
+
+        with sr.AudioFile(audio_path) as source:
+            audio_data = recognizer.record(source)
 
         # Convert speech to text
-        text = recognizer.recognize_google(audio)
+        text = recognizer.recognize_google(audio_data)
 
         # Send text to OpenAI
         response = openai.ChatCompletion.create(
