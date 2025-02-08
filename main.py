@@ -1,6 +1,7 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile
 import speech_recognition as sr
 import openai
+import io
 import os
 
 # Load OpenAI API key from environment variable
@@ -9,17 +10,17 @@ openai.api_key = os.environ.get("OPENAI_API_KEY")
 app = FastAPI()
 
 @app.post("/speech-to-text")
-async def speech_to_text():
+async def speech_to_text(audio_file: UploadFile = File(...)):
     recognizer = sr.Recognizer()
 
     try:
-        # Use the microphone as source for input.
-        # This will only work in an environment with a microphone.
-        with sr.Microphone() as source:
-            print("Adjusting for ambient noise, please wait...")
-            recognizer.adjust_for_ambient_noise(source)
-            print("Listening for your voice command...")
-            audio_data = recognizer.listen(source)
+        # Read the audio file bytes
+        audio_bytes = await audio_file.read()
+        audio_file_obj = io.BytesIO(audio_bytes)
+
+        # Use AudioFile to process the uploaded file
+        with sr.AudioFile(audio_file_obj) as source:
+            audio_data = recognizer.record(source)
 
         # Convert speech to text using Google Speech Recognition
         text = recognizer.recognize_google(audio_data)
@@ -27,7 +28,7 @@ async def speech_to_text():
 
         # Send the transcribed text to OpenAI and get a response
         response = openai.ChatCompletion.create(
-            model="gpt-4-turbo",  # or "gpt-3.5-turbo" as needed
+            model="gpt-3.5-turbo",  # or "gpt-4" if available
             messages=[{"role": "user", "content": text}]
         )
 
