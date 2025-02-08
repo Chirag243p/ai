@@ -1,6 +1,7 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 import speech_recognition as sr
+import os
 
 app = FastAPI()
 
@@ -9,7 +10,7 @@ def speech_to_text():
     recognizer = sr.Recognizer()
 
     try:
-        # Use the microphone as the audio source.
+        # This will fail in Render because there is no microphone hardware!
         with sr.Microphone() as source:
             print("Listening...")
             recognizer.adjust_for_ambient_noise(source)
@@ -28,4 +29,6 @@ def speech_to_text():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=5000)
+    # Use the PORT environment variable provided by Render (default to 5000 for local testing)
+    port = int(os.environ.get("PORT", 5000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
