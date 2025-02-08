@@ -36,3 +36,4 @@ pyaudio
 sounddevice
 speechrecognition
 uvicorn
+fastapi
