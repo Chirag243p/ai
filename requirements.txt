@@ -35,3 +35,4 @@ pipwin
 pyaudio
 sounddevice
 speechrecognition
+uvicorn
