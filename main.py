@@ -1,39 +1,36 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile
 import speech_recognition as sr
 import openai
+import os
 
-# Set your OpenAI API key here
-openai.api_key = OPENKEY
+# Load OpenAI API key from environment variable
+openai.api_key = os.environ.get("OPENAI_API_KEY")
 
-# FastAPI app initialization
+# Initialize FastAPI app
 app = FastAPI()
 
 @app.post("/speech-to-text")
-async def speech_to_text():
+async def speech_to_text(file: UploadFile = File(...)):
     recognizer = sr.Recognizer()
 
     try:
-        # Using Microphone as source to record audio
-        with sr.Microphone() as source:
-            print("Listening...")
-            recognizer.adjust_for_ambient_noise(source)
-            audio = recognizer.listen(source)
+        # Read the uploaded audio file
+        with open("temp_audio.wav", "wb") as buffer:
+            buffer.write(await file.read())
 
-        # Convert speech to text using Google Speech Recognition API
+        with sr.AudioFile("temp_audio.wav") as source:
+            audio = recognizer.record(source)
+
+        # Convert speech to text
         text = recognizer.recognize_google(audio)
-        print(f"You said: {text}")
 
-        # Send the transcribed text to OpenAI and get a response
+        # Send text to OpenAI
         response = openai.ChatCompletion.create(
-            model="gpt-4-turbo",  # You can change this to "gpt-3.5-turbo" if needed
+            model="gpt-4-turbo",
             messages=[{"role": "user", "content": text}]
         )
 
-        # Extract the response from OpenAI
-        chatgpt_answer = response['choices'][0]['message']['content'].strip()
-
-        # Return the OpenAI response as JSON
-        return {"text": text, "chatgpt_response": chatgpt_answer}
+        return {"text": text, "chatgpt_response": response['choices'][0]['message']['content'].strip()}
 
     except sr.UnknownValueError:
         raise HTTPException(status_code=400, detail="Could not understand the audio.")
@@ -42,4 +39,4 @@ async def speech_to_text():
     except openai.error.OpenAIError as e:
         raise HTTPException(status_code=500, detail=f"OpenAI API error: {e}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
